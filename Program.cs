@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Data;
 using System.Diagnostics.Tracing;
+using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 
 namespace HelloWorld
@@ -10,12 +11,24 @@ namespace HelloWorld
         static void Main()
         {
             string connStr = System.Environment.GetEnvironmentVariable("CONNSTR");
-            string qs = "SELECT @@version;";
+            int numConns = Int32.Parse(System.Environment.GetEnvironmentVariable("NUMCONNS"));
+            string bootstrapQueryStr = System.Environment.GetEnvironmentVariable("BOOTSTRAPQUERYSTR");
+            string queryStr = System.Environment.GetEnvironmentVariable("QUERYSTR");
+            if (numConns > 1)
+            {
+                Console.WriteLine("bootstrapping");
+                Parallel.For(0, numConns, i =>
+                {
+                    CreateCommand(bootstrapQueryStr, connStr);
+                });
+                Console.WriteLine("... done");
+                System.Threading.Thread.Sleep(30000);
+            }
             while (true)
             {
                 Console.WriteLine("CreateCommand");
-                CreateCommand(qs, connStr);
-                System.Threading.Thread.Sleep(60000);
+                CreateCommand(queryStr, connStr);
+                System.Threading.Thread.Sleep(30000);
             }
         }
 
