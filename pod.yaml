@@ -1,0 +1,63 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: "2022-11-15T03:21:52Z"
+  labels:
+    run: dotnetsql
+  name: dotnetsql
+  namespace: default
+  resourceVersion: "8415435"
+  uid: a9408708-6a0e-4c62-96dc-6ee9782905e1
+spec:
+  shareProcessNamespace: true
+  containers:
+  - name: dotnetsql
+    image: pihepublic.azurecr.io/dotnetsql:6-4.1.0-parallel
+    imagePullPolicy: Always
+    env:
+    - name: CONNSTR
+      value: Server=tcp:labsqlpihe.database.windows.net,1433;Initial Catalog=labsql;Persist
+        Security Info=False;User ID=CloudSAa620f28b;Password={};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection
+        Timeout=30;ConnectRetryInterval=1;ConnectRetryCount=3;Min Pool Size=2;Max
+        Pool Size=100;
+    - name: BOOTSTRAPQUERYSTR
+      value: begin; select * from T1; waitfor delay '00:00:10'; end;
+    - name: QUERYSTR
+      value: select * from T1;
+    - name: NUMCONNS
+      value: "5"
+    # - name: DOTNET_DiagnosticPorts
+    #   value: /tmp/diag.sock
+    volumeMounts:
+    - name: shared
+      mountPath: /tmp
+  - name: dotnet-trace
+    image: mcr.microsoft.com/dotnet/sdk:6.0
+    imagePullPolicy: Always
+    env:
+    - name: POD_NAME
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: metadata.name
+    command:
+    - bash
+    - -exc
+    - |
+      dotnet tool install --global dotnet-trace
+      export PATH="$PATH:/root/.dotnet/tools"
+      NOW=`date -u '+%Y%m%d%H%M%S'`
+      dotnet-trace collect --clrevents exception+eventsource --providers Microsoft.Data.SqlClient.EventSource -n dotnet -o /diag/$NOW.nettrace
+    volumeMounts:
+    - name: shared
+      mountPath: /tmp
+    - name: output
+      mountPath: /diag
+      subPathExpr: $(POD_NAME)
+  volumes:
+  - name: shared
+    emptyDir: {}
+  - name: output
+    hostPath:
+      path: /tmp/diag
+      type: DirectoryOrCreate

@@ -22,13 +22,17 @@ namespace HelloWorld
                     CreateCommand(bootstrapQueryStr, connStr);
                 });
                 Console.WriteLine("... done");
-                System.Threading.Thread.Sleep(30000);
+                System.Threading.Thread.Sleep(60000);
             }
             while (true)
             {
                 Console.WriteLine("CreateCommand");
-                CreateCommand(queryStr, connStr);
-                System.Threading.Thread.Sleep(30000);
+                // CreateCommand(queryStr, connStr);
+                Parallel.For(0, numConns, i =>
+                {
+                    CreateCommand(queryStr, connStr);
+                });
+                System.Threading.Thread.Sleep(60000);
             }
         }
 
